@@ -1,0 +1,17 @@
+*.parquet
+*.csv
+*.json
+*.db
+*.log
+*.txt
+*.md
+*.yml
+*.yaml
+*.html
+*.css
+*.js
+*.png
+*.jpg
+*.jpeg
+*.npy
+*.o
