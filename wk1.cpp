@@ -13,6 +13,11 @@ bool verify_results(const float* ref, const float* test, int size, float toleran
 
 int main() {
     std::vector<float> Q(N * D, 0.1f), K(N * D, 0.2f), V(N * D, 0.3f);
+    // use random initialization for more realistic testing
+
+    for (auto& x : Q) x = static_cast<float>(std::rand()) / RAND_MAX;
+    for (auto& x : K) x = static_cast<float>(std::rand()) / RAND_MAX;
+    for (auto& x : V) x = static_cast<float>(std::rand()) / RAND_MAX;
     std::vector<float> out_std(N * D), out_online(N * D), out_gpu(N * D);
 
     // Timing Wrapper

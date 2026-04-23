@@ -12,7 +12,7 @@ ARCH_FLAGS := -gencode arch=compute_89,code=sm_89 \
 
 # Project Files
 TARGET   := attention_proj
-SRCS     := wk1.cpp cpu_reference.cpp gpu_kernels.cu
+SRCS     := wk2.cpp cpu_reference.cpp gpu_kernels.cu
 HDRS     := attention.h
 OBJS     := $(SRCS:.cpp=.o)
 OBJS     := $(OBJS:.cu=.o)
