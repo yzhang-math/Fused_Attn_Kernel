@@ -69,7 +69,7 @@ This produces:
 To run in a Slurm-managed environment:
 
 ```bash
-sbatch job_submit.sh
+sbatch task1.sh
 ```
 
 ## Numerical Tolerance
