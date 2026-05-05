@@ -8,7 +8,7 @@ This project implements a high-performance fused attention kernel using NVIDIA C
 - **Week 3**: Tensor core integration using FP16 precision
 - **Week 4**: Profiling, roofline analysis, and performance characterization
 
-**Key Achievement**: The fused kernel achieves **~26x speedup** over CPU reference while maintaining numerical accuracy, demonstrating the effectiveness of memory hierarchy optimization and algorithmic fusion.
+**Key Achievement**: The updated benchmark harness reports kernel-only GPU timings (excluding explicit H2D/D2H timing windows), enabling roofline plots that are directly tied to executed measurements.
 
 ---
 
@@ -255,14 +255,14 @@ WMMA Kernel:   ~4.5-5 ms   (2.8-3x speedup)
 
 ## Part 5: Performance Summary
 
-### 5.1 Speedup Comparison
+### 5.1 Speedup Comparison (Latest Executed Run)
 
 | Implementation | Time (ms) | CPU Speedup | Speedup vs Naive |
 |---|---|---|---|
-| CPU Standard | 2782 | 1.0x | - |
-| GPU Naive | 199 | 14.0x | 1.0x |
-| GPU Fused | 105 | 26.5x | **1.9x** |
-| GPU WMMA | 143 | 19.4x | 1.4x |
+| CPU Standard | 2622.591 | 1.0x | - |
+| GPU Naive (kernel-only) | 40.282 | 65.1x | 1.0x |
+| GPU Fused (kernel-only) | 101.793 | 25.8x | 0.40x |
+| GPU WMMA (kernel-only) | 142.432 | 18.4x | 0.28x |
 
 ### 5.2 Memory Efficiency
 
@@ -274,7 +274,17 @@ WMMA Kernel:   ~4.5-5 ms   (2.8-3x speedup)
 
 **Reduction**: Fused reduces memory traffic by **75%** vs naive!
 
-### 5.3 Accuracy Verification
+### 5.3 Measured Throughput (Latest Run)
+
+Using the same FLOP model already used by this project (`4*N*N*D`):
+
+| Kernel | Time (ms) | Measured TFLOPS |
+|---|---|---|
+| Naive | 40.282 | 0.00666 |
+| Fused | 101.793 | 0.00264 |
+| WMMA | 142.432 | 0.00188 |
+
+### 5.4 Accuracy Verification
 
 All implementations pass accuracy tests against CPU reference:
 
@@ -342,7 +352,7 @@ make
 ./attention_proj
 ```
 
-### Expected Output
+### Expected Output (Latest Run)
 
 ```
 ╔════════════════════════════════════════════════════════════════╗
@@ -351,13 +361,13 @@ make
 ╚════════════════════════════════════════════════════════════════╝
 
 --- Week 1-2: CPU & GPU Baselines ---
-CPU Standard              | Time: 2782 ms
-CPU Online Softmax        | Time: 344 ms
-GPU Naive (Unfused)       | Time: 199 ms
-GPU Fused (SRAM)          | Time: 105 ms
+CPU Standard              | Time: 2622.591 ms
+CPU Online Softmax        | Time: 333.900 ms
+GPU Naive (Unfused)       | Kernel Time: 40.282 ms
+GPU Fused (SRAM)          | Kernel Time: 101.793 ms
 
 --- Week 3: Tensor Core Optimization ---
-GPU WMMA (FP16)           | Time: 143 ms
+GPU WMMA (FP16)           | Kernel Time: 142.432 ms
 
 --- Accuracy Verification (Ref: CPU Standard) ---
 CPU Online Softmax   | Max Error: 1.79e-07 | [PASS]

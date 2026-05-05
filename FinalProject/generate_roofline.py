@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib.patches import Rectangle
 
 def generate_roofline_chart():
-    """Generate roofline model visualization"""
+    """Generate roofline model visualization with measured points"""
     
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
@@ -19,10 +19,12 @@ def generate_roofline_chart():
     }
     
     kernels = {
-        'Naive': {'ai': 28.4, 'color': 'red', 'marker': 'o'},
-        'Fused': {'ai': 256.0, 'color': 'blue', 'marker': 's'},
-        'WMMA': {'ai': 256.0, 'color': 'green', 'marker': '^'},
+        'Naive': {'ai': 28.4, 'color': 'red', 'marker': 'o', 'time_ms': 40.282},
+        'Fused': {'ai': 256.0, 'color': 'blue', 'marker': 's', 'time_ms': 101.793},
+        'WMMA': {'ai': 256.0, 'color': 'green', 'marker': '^', 'time_ms': 142.432},
     }
+    # FLOPs used in current benchmark output (N=1024, D=64)
+    total_flops = 4 * (1024 ** 2) * 64
     
     for idx, (gpu_name, specs) in enumerate(gpus.items()):
         ax = axes[idx]
@@ -48,26 +50,32 @@ def generate_roofline_chart():
         ax.loglog(ai_range, memory_bound, 'b--', linewidth=1.5, alpha=0.5, label='Memory-Bound')
         ax.loglog(ai_range, compute_bound, 'r--', linewidth=1.5, alpha=0.5, label='Compute-Bound')
         
-        # Plot actual kernels
+        # Plot roofline ceiling and measured kernel points
         for kernel_name, kernel_spec in kernels.items():
             ai = kernel_spec['ai']
-            
-            # Calculate achieved throughput
-            achieved = min(peak_tflops, (ai * mem_bw_gb) / 1000)
-            
-            ax.loglog(ai, achieved, marker=kernel_spec['marker'], 
+            roofline_ceiling = min(peak_tflops, (ai * mem_bw_gb) / 1000)
+            measured_tflops = (total_flops / 1e12) / (kernel_spec['time_ms'] / 1000.0)
+
+            # Theoretical ceiling marker
+            ax.loglog(ai, roofline_ceiling, marker=kernel_spec['marker'],
+                     markersize=9, markerfacecolor='none', markeredgewidth=2,
+                     color=kernel_spec['color'],
+                     label=f'{kernel_name} ceiling', zorder=4)
+
+            # Measured marker from executed run
+            ax.loglog(ai, measured_tflops, marker=kernel_spec['marker'],
                      markersize=12, color=kernel_spec['color'], 
-                     label=f'{kernel_name} (AI={ai})', zorder=5)
-            
-            # Add annotation
+                     label=f'{kernel_name} measured', zorder=6)
+
+            # Add annotation for measured point
             if kernel_name == 'Naive':
                 status = "Memory-bound"
             else:
                 status = "Compute-bound" if ai > knee_ai else "Memory-bound"
-            
-            ax.annotate(f'{status}', 
-                       xy=(ai, achieved), 
-                       xytext=(10, 10), 
+
+            ax.annotate(f'{status}\n{measured_tflops:.4f} TFLOPS',
+                       xy=(ai, measured_tflops),
+                       xytext=(10, 10),
                        textcoords='offset points',
                        fontsize=9,
                        bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3),
@@ -80,7 +88,7 @@ def generate_roofline_chart():
                     fontsize=12, fontweight='bold')
         ax.grid(True, which='both', alpha=0.3)
         ax.set_xlim([1, 500])
-        ax.set_ylim([1, peak_tflops * 1.5])
+        ax.set_ylim([0.001, peak_tflops * 1.5])
         
         # Add knee marker
         ax.axvline(knee_ai, color='gray', linestyle=':', alpha=0.5, linewidth=1)
@@ -89,7 +97,7 @@ def generate_roofline_chart():
     
     # Common legend
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='upper center', ncol=6, fontsize=10, 
+    fig.legend(handles, labels, loc='upper center', ncol=4, fontsize=10,
               bbox_to_anchor=(0.5, 1.02))
     
     plt.tight_layout(rect=[0, 0, 1, 0.98])
@@ -104,8 +112,8 @@ def generate_speedup_chart():
     fig, ax = plt.subplots(figsize=(10, 6))
     
     kernels = ['CPU\nStandard', 'GPU\nNaive', 'GPU\nFused', 'GPU\nWMMA']
-    times_ms = [2635, 169, 106, 144]
-    speedups = [1.0, 15.6, 24.9, 18.3]
+    times_ms = [2622.591, 40.282, 101.793, 142.432]
+    speedups = [1.0, 2622.591 / 40.282, 2622.591 / 101.793, 2622.591 / 142.432]
     colors = ['gray', 'lightcoral', 'lightblue', 'lightgreen']
     
     # Create bar chart
@@ -128,9 +136,9 @@ def generate_speedup_chart():
     ax.axhline(y=1, color='red', linestyle='--', alpha=0.5, linewidth=1)
     
     # Add acceleration arrow
-    ax.annotate('', xy=(3, 24.9), xytext=(1, 1),
+    ax.annotate('', xy=(3, speedups[2]), xytext=(1, 1),
                arrowprops=dict(arrowstyle='->', lw=2.5, color='darkgreen', alpha=0.6))
-    ax.text(2, 13, '25x improvement', fontsize=12, fontweight='bold', 
+    ax.text(2, max(speedups) * 0.45, f'{speedups[1]:.1f}x improvement', fontsize=12, fontweight='bold',
            color='darkgreen', bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
     
     plt.tight_layout()
@@ -162,7 +170,7 @@ def generate_memory_analysis():
     ax1.grid(axis='y', alpha=0.3)
     
     # Arithmetic Intensity
-    ai = [47, 200, 270]
+    ai = [28.4, 256, 256]
     bars2 = ax2.bar(kernels, ai, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
     ax2.set_ylabel('Arithmetic Intensity (FLOP/byte)', fontsize=11, fontweight='bold')
     ax2.set_title('Compute Efficiency', fontsize=12, fontweight='bold')

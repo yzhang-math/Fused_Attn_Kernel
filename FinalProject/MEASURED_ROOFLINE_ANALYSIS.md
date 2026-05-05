@@ -1,4 +1,4 @@
-# Measured Roofline Analysis: Closing the Inspiration Gap
+# Measured Roofline Analysis: Executed Run Update
 
 ## The Problem with the Original Roofline Chart
 
@@ -91,84 +91,26 @@ Fused (AI=256):   ABOVE knee  → Compute-bound  → 66.6 TFLOPS max
 WMMA (AI=256):    ABOVE knee  → Compute-bound  → 66.6 TFLOPS max
 ```
 
-## The Harsh Reality: Where Measured Perf Actually Sits
+## Executed Results (Kernel-Only Timing)
 
-Our measured execution times show kernels running **70-95% SLOWER** than theoretical:
+From the latest `./attention_proj` execution (CUDA event timing around kernel launch only):
 
-### Breakdown of 100.857 ms (Fused Kernel on 4070 Ti Super)
+| Kernel | Time (ms) | Measured TFLOPS* |
+|--------|-----------|------------------|
+| Naive  | 40.282    | 0.00666 |
+| Fused  | 101.793   | 0.00264 |
+| WMMA   | 142.432   | 0.00188 |
 
-```
-Total Time: 100.857 ms
-├─ H2D Transfer (Q,K,V): ~8 ms (288 GB/s limit)
-├─ Kernel Execution: ~4 ms (estimated from memory bandwidth)
-├─ D2H Transfer (output): ~2 ms
-├─ Overhead/Sync: ~87 ms (!!!!)
-└─ Total: 100.857 ms
+*TFLOPS uses the same project formula: `4*N*N*D / time`.
 
-Kernel-only time: ~4 ms
-Theoretical (at peak): 0.004 ms
-Gap: 1000x due to included transfers!
-```
+## Important Note on Interpretation
 
-## Important Distinction
+These measurements now exclude explicit H2D/D2H timing windows in the benchmark harness, but the current kernel wrappers still include extra per-call overhead (for example, temporary allocations in the naive path). Therefore the roofline plot should be interpreted as:
 
-The roofline chart now correctly shows:
+1. **Roofline ceiling points**: architecture-limited upper bounds.
+2. **Measured points**: observed end-to-end kernel launcher behavior in the current codebase.
 
-1. **On the Chart (at roofline ceiling):**
-   - Naive, Fused, and WMMA kernels plot at their theoretical maximum
-   - This represents 100% efficiency (ideal case)
+## Updated Summary
 
-2. **In Reality (actual measured):**
-   - Kernel-only execution: 3-5 TFLOPS (only 4-7% of peak)
-   - With H2D/D2H overhead: 1-3 GFLOPS (0.001-0.003 TFLOPS)
-   - Efficiency: 1-10% of theoretical
-
-## Why This Matters for System Design
-
-1. **Transfer Overhead Dominates** 
-   - PCIe x8 is the primary bottleneck, not GPU compute
-   - Kernel execution is trivial (~4ms) vs transfers (~10ms) and overhead
-
-2. **Speedups are Real, but Not Due to Peak Utilization**
-   - Fused is 2.6x faster than Naive not because it's compute-bound
-   - It's faster because it uses 9x less global memory (9.4MB → 1.0MB)
-   - Reducing memory traffic directly reduces H2D/D2H overhead
-
-3. **For Fair Comparison**
-   - Need kernel-only timing using CUDA events (excludes transfers)
-   - Or fixed input size + amortize transfers over many runs
-   - Our speedups (24.9x) are REAL despite low absolute TFLOPS
-
-## The Corrected Roofline Chart
-
-The updated `roofline_analysis.png` now:
-- ✅ Shows measured AI values (28.4, 256, 256)
-- ✅ Plots kernels at their theoretical ceiling
-- ✅ Includes prominent warning about the inspiration gap
-- ✅ Explains why actual perf sits 70-95% below
-
-## Conclusions
-
-1. **The Roofline Model is Correct**
-   - Fused kernel IS compute-bound on both GPUs
-   - Fused SHOULD achieve high TFLOPS if isolation from transfers
-   - The model accurately predicts kernel behavior
-
-2. **But In Practice, Transfers Dominate**
-   - Real-world measurements include H2D/D2H
-   - This creates a false impression of low efficiency
-   - Need profiler (ncu) for kernel-only metrics
-
-3. **The Speedup is Real**
-   - 24.9x speedup from Naive to Fused is genuine
-   - Achieved through arithmetic intensity increase (10x) + fusion (2-3x)
-   - Despite absolute TFLOPS being low, the relative improvement is solid
-
-4. **Next Step for Accuracy**
-   - Run with CUDA event timing for kernel-only execution
-   - Profile with NVIDIA Nsight Compute (`ncu`) to measure actual:
-     - SM throughput
-     - Memory bandwidth utilization
-     - Instruction latency
-   - Then plot actual measured TFLOPS on the roofline
+The regenerated roofline chart now overlays measured throughput from the executed run directly against theoretical ceilings. This closes the gap between model assumptions and reported benchmark numbers in the project documentation.
 

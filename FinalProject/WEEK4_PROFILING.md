@@ -35,6 +35,20 @@ Key metrics for roofline analysis:
 
 ## Task 4.2: Extract Throughput Metrics
 
+### Latest Executed Measurements (`./attention_proj`)
+
+Kernel-only timing window (CUDA events around kernel launch, excluding explicit H2D/D2H timing region):
+
+| Kernel | Time (ms) | TFLOPS (`4*N*N*D/time`) |
+|---|---|---|
+| Naive | 40.282 | 0.00666 |
+| Fused | 101.793 | 0.00264 |
+| WMMA | 142.432 | 0.00188 |
+
+CPU reference from same run:
+- CPU Standard: 2622.591 ms
+- CPU Online Softmax: 333.900 ms
+
 ### Naive Kernel Arithmetic
 
 **Operation Count:**

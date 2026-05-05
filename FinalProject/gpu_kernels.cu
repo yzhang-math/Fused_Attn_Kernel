@@ -37,6 +37,18 @@ __global__ void softmax_v_kernel(float* S, const float* V, float* O) {
     }
 }
 
+void gpu_attention_naive_kernel(const float* d_Q, const float* d_K, const float* d_V, float* d_O) {
+    float* d_S;
+    cudaMalloc(&d_S, N * N * sizeof(float));
+
+    dim3 gridS((N + 15) / 16, (N + 15) / 16);
+    dim3 blockS(16, 16);
+    qk_kernel<<<gridS, blockS>>>(d_Q, d_K, d_S);
+    softmax_v_kernel<<<(N + 255) / 256, 256>>>(d_S, d_V, d_O);
+
+    cudaFree(d_S);
+}
+
 void gpu_attention_naive(const float* Q, const float* K, const float* V, float* O) {
     float *d_Q, *d_K, *d_V, *d_S, *d_O;
     cudaMalloc(&d_Q, N * D * sizeof(float));
@@ -52,7 +64,6 @@ void gpu_attention_naive(const float* Q, const float* K, const float* V, float* 
     dim3 gridS((N + 15) / 16, (N + 15) / 16);
     dim3 blockS(16, 16);
     qk_kernel<<<gridS, blockS>>>(d_Q, d_K, d_S);
-
     softmax_v_kernel<<<(N + 255) / 256, 256>>>(d_S, d_V, d_O);
 
     cudaMemcpy(O, d_O, N * D * sizeof(float), cudaMemcpyDeviceToHost);
@@ -143,6 +154,12 @@ __global__ void fused_attention_v1(const float* Q, const float* K, const float* 
     }
 }
 
+void gpu_attention_fused_kernel(const float* d_Q, const float* d_K, const float* d_V, float* d_O) {
+    dim3 grid((N + BR - 1) / BR);
+    dim3 block(BR);
+    fused_attention_v1<<<grid, block>>>(d_Q, d_K, d_V, d_O);
+}
+
 // Wrapper function to launch the kernel
 void gpu_attention_fused(const float* Q, const float* K, const float* V, float* O) {
     float *d_Q, *d_K, *d_V, *d_O;
@@ -155,11 +172,7 @@ void gpu_attention_fused(const float* Q, const float* K, const float* V, float* 
     cudaMemcpy(d_K, K, N * D * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_V, V, N * D * sizeof(float), cudaMemcpyHostToDevice);
 
-    // Grid: (N + BR - 1) / BR blocks (1024/48 = 21.33... = 22 blocks), each with BR threads
-    dim3 grid((N + BR - 1) / BR);
-    dim3 block(BR);
-
-    fused_attention_v1<<<grid, block>>>(d_Q, d_K, d_V, d_O);
+    gpu_attention_fused_kernel(d_Q, d_K, d_V, d_O);
 
     cudaMemcpy(O, d_O, N * D * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -261,6 +274,12 @@ __global__ void fused_attention_wmma(const float* Q, const float* K, const float
     }
 }
 
+void gpu_attention_wmma_kernel(const float* d_Q, const float* d_K, const float* d_V, float* d_O) {
+    dim3 grid((N + BR - 1) / BR);
+    dim3 block(BR);
+    fused_attention_wmma<<<grid, block>>>(d_Q, d_K, d_V, d_O);
+}
+
 // Wrapper function for WMMA kernel
 void gpu_attention_wmma(const float* Q, const float* K, const float* V, float* O) {
     float *d_Q, *d_K, *d_V, *d_O;
@@ -273,11 +292,7 @@ void gpu_attention_wmma(const float* Q, const float* K, const float* V, float* O
     cudaMemcpy(d_K, K, N * D * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_V, V, N * D * sizeof(float), cudaMemcpyHostToDevice);
 
-    // Grid dimensions: (N + BR - 1) / BR blocks, each with BR threads
-    dim3 grid((N + BR - 1) / BR);
-    dim3 block(BR);
-
-    fused_attention_wmma<<<grid, block>>>(d_Q, d_K, d_V, d_O);
+    gpu_attention_wmma_kernel(d_Q, d_K, d_V, d_O);
 
     cudaMemcpy(O, d_O, N * D * sizeof(float), cudaMemcpyDeviceToHost);
 

@@ -2,7 +2,7 @@
 
 ## Summary of Changes
 
-Updated roofline analysis from theoretical RTX 4090 benchmarks to actual hardware configuration:
+Updated roofline analysis from static theoretical assumptions to include measured kernel timings from the latest executed `./attention_proj` run:
 - **RTX 3090** or **RTX 4070 Ti Super**
 - Running on **PCIe 4.0 x8** (not x16)
 
@@ -108,29 +108,22 @@ This explains why 4070 Ti Super benefits significantly from optimization but req
 | Fused Status | Compute-bound | Compute-bound | Memory-bound |
 | Speedup (F vs N) | 24.9x | ~1.8x | ~4.3x |
 
-## Expected Performance
+## Measured Performance (Latest Executed Run)
 
-### RTX 3090 (PCIe 4.0 x8)
 ```
-CPU Standard:    2,635 ms (baseline)
-GPU Naive:       ~150 ms (17.6x speedup)
-GPU Fused:       ~90 ms (29.3x speedup) ✅ BEST
-GPU WMMA:        ~100 ms (26.4x speedup)
-```
-
-### RTX 4070 Ti Super (PCIe 4.0 x8)
-```
-CPU Standard:    2,635 ms (baseline)
-GPU Naive:       ~300 ms (8.8x speedup)
-GPU Fused:       ~70 ms (37.6x speedup) ✅ VERY GOOD
-GPU WMMA:        ~60 ms (43.9x speedup) ✅ BEST
+CPU Standard:    2622.591 ms
+CPU Online:      333.900 ms
+GPU Naive:       40.282 ms (kernel-only timing window)
+GPU Fused:       101.793 ms (kernel-only timing window)
+GPU WMMA:        142.432 ms (kernel-only timing window)
 ```
 
 ## Files Updated
 
-- `generate_roofline.py` - Updated GPU specifications and regenerated chart
-- `roofline_analysis.png` - New visualization with RTX 3090 and 4070 Ti Super
-- `HARDWARE_SPECS.md` - New detailed hardware analysis document
+- `generate_roofline.py` - Updated to plot both roofline ceilings and measured points from executed run
+- `roofline_analysis.png` - Regenerated with measured kernel markers
+- `speedup_comparison.png` - Regenerated with latest timing/speedup values
+- `memory_analysis.png` - Regenerated with updated arithmetic intensity values (28.4, 256, 256)
 
 ## Validation
 

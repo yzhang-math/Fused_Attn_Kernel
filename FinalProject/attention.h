@@ -20,6 +20,12 @@ void gpu_attention_naive(const float* Q, const float* K, const float* V, float* 
 void gpu_attention_fused(const float* Q, const float* K, const float* V, float* O);
 void gpu_attention_wmma(const float* Q, const float* K, const float* V, float* O);
 
+// Kernel launchers that assume pointers are already on device memory.
+// Useful for kernel-only timing (excluding H2D/D2H transfers).
+void gpu_attention_naive_kernel(const float* d_Q, const float* d_K, const float* d_V, float* d_O);
+void gpu_attention_fused_kernel(const float* d_Q, const float* d_K, const float* d_V, float* d_O);
+void gpu_attention_wmma_kernel(const float* d_Q, const float* d_K, const float* d_V, float* d_O);
+
 // Utility for accuracy check
 bool verify_results(const char* label, const float* ref, const float* test, int size, float tolerance = 1e-4f);
 
