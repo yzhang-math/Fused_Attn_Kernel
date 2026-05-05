@@ -19,9 +19,9 @@ def generate_roofline_chart():
     }
     
     kernels = {
-        'Naive': {'ai': 47, 'color': 'red', 'marker': 'o'},
-        'Fused': {'ai': 200, 'color': 'blue', 'marker': 's'},
-        'WMMA': {'ai': 270, 'color': 'green', 'marker': '^'},
+        'Naive': {'ai': 28.4, 'color': 'red', 'marker': 'o'},
+        'Fused': {'ai': 256.0, 'color': 'blue', 'marker': 's'},
+        'WMMA': {'ai': 256.0, 'color': 'green', 'marker': '^'},
     }
     
     for idx, (gpu_name, specs) in enumerate(gpus.items()):
