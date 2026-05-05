@@ -18,6 +18,7 @@ void cpu_attention_online(const float* Q, const float* K, const float* V, float*
 // GPU Implementations
 void gpu_attention_naive(const float* Q, const float* K, const float* V, float* O);
 void gpu_attention_fused(const float* Q, const float* K, const float* V, float* O);
+void gpu_attention_wmma(const float* Q, const float* K, const float* V, float* O);
 
 // Utility for accuracy check
 bool verify_results(const char* label, const float* ref, const float* test, int size, float tolerance = 1e-4f);

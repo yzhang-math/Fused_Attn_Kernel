@@ -10,7 +10,7 @@ int main() {
     std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
     std::vector<float> Q(N * D), K(N * D), V(N * D);
-    std::vector<float> out_std(N * D), out_online(N * D), out_naive(N * D), out_fused(N * D);
+    std::vector<float> out_std(N * D), out_online(N * D), out_naive(N * D), out_fused(N * D), out_wmma(N * D);
 
     for (int i = 0; i < N * D; ++i) {
         Q[i] = dist(gen);
@@ -28,22 +28,24 @@ int main() {
                   << " | Time: " << std::fixed << std::setprecision(3) << diff.count() << " ms" << std::endl;
     };
 
-    std::cout << "--- Performance Benchmarking (N=" << N << ", d=" << D << ") ---" << std::endl;
+    std::cout << "--- Comprehensive Benchmarking (N=" << N << ", d=" << D << ") ---" << std::endl;
     
     // CPU References [cite: 16, 17]
     benchmark(cpu_attention_standard, out_std.data(), "CPU Standard");
     benchmark(cpu_attention_online, out_online.data(), "CPU Online");
 
-    // GPU Implementations [cite: 18, 27]
+    // GPU Implementations [cite: 18, 27, Week3]
     benchmark(gpu_attention_naive, out_naive.data(), "GPU Naive (Unfused)");
     benchmark(gpu_attention_fused, out_fused.data(), "GPU Fused (SRAM)");
+    benchmark(gpu_attention_wmma, out_wmma.data(), "GPU WMMA (FP16)");
 
     std::cout << "\n--- Accuracy Verification (Ref: CPU Standard) ---" << std::endl;
     
-    // Task 1.4 & 2.5 Accuracy Checks [cite: 20, 27]
+    // Task 1.4 & 2.5 & 3.5 Accuracy Checks
     verify_results("Online Softmax CPU", out_std.data(), out_online.data(), N * D);
     verify_results("Naive GPU Kernel", out_std.data(), out_naive.data(), N * D);
     verify_results("Fused GPU Kernel", out_std.data(), out_fused.data(), N * D);
+    verify_results("WMMA Tensor Core", out_std.data(), out_wmma.data(), N * D);
 
     return 0;
 }
